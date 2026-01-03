@@ -1,0 +1,28 @@
+syntax = "proto3";
+option go_package = ".;proto"; // 必须要指定包名
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+
+  //服务端流模式
+  rpc GetStream(StreamReqData) returns (stream StreamResData);
+  //客户端流模式
+  rpc PutStream(stream StreamReqData) returns (StreamResData);
+  //双向流模式
+  rpc AllStream(stream StreamReqData) returns (stream StreamResData);
+}
+
+message HelloRequest {
+  string name = 1;  // 1表示字段的序号不是值
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message StreamReqData {
+  string data = 1;
+}
+
+message StreamResData {
+  string data = 1;
+}

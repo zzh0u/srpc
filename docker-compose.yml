@@ -1,0 +1,67 @@
+services:
+  # gRPC服务器
+  grpc-server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "50051:50051"  # 暴露gRPC端口
+    networks:
+      - grpc-network
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # gRPC客户端（可以运行多个实例）
+  grpc-client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    depends_on:
+      grpc-server:
+        condition: service_started
+    networks:
+      - grpc-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ps", "aux", "|", "grep", "-q", "[c]lient"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    environment:
+      - GRPC_SERVER_ADDR=grpc-server:50051  # 使用服务名连接
+      - REQUEST_INTERVAL_SEC=30
+      - MAX_RETRIES=3
+      - KEEP_ALIVE_SEC=20
+      - JITTER_PERCENT=10
+      - MAX_CONCURRENT_REQUESTS=5
+      - ENABLE_COMPRESSION=true  # 启用压缩
+      - COMPRESSION_TYPE=snappy  # 压缩类型
+      - GENERATE_REQUEST_ID=true  # 生成请求ID
+      - TZ=UTC
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    # 可以扩展多个实例
+    # scale: 3
+
+networks:
+  grpc-network:
+    driver: bridge
+    name: srpc-network
