@@ -27,7 +27,7 @@ func (c *GRPCClient) calculateJitteredInterval() time.Duration {
 	// 计算最终间隔
 	interval := float64(c.config.RequestInterval) + jitter
 
-	// 确保间隔不小于1毫秒
+	// 确保间隔不小于 1 毫秒
 	if interval < float64(time.Millisecond) {
 		return time.Millisecond
 	}
@@ -45,7 +45,7 @@ func (c *GRPCClient) mainLoop() {
 
 		select {
 		case <-c.ctx.Done():
-			c.logger.Info("主循环收到关闭信号，正在退出")
+			c.slogger.Info("主循环收到关闭信号，正在退出")
 			return
 		case <-time.After(waitInterval):
 			c.makeRequest()
@@ -53,7 +53,7 @@ func (c *GRPCClient) mainLoop() {
 	}
 }
 
-// makeRequest 发起gRPC请求
+// makeRequest 发起 gRPC 请求
 func (c *GRPCClient) makeRequest() {
 	c.mu.RLock()
 	isShutting := c.isShutting
@@ -67,40 +67,40 @@ func (c *GRPCClient) makeRequest() {
 	// 检查熔断器
 	if !c.circuitBreaker.AllowRequest() {
 		cbState := c.circuitBreaker.GetState()
-		c.logger.Info("熔断器状态，跳过本次请求", map[string]interface{}{"circuit_breaker_state": cbState})
+		c.slogger.Info("熔断器状态，跳过本次请求", map[string]interface{}{"circuit_breaker_state": cbState})
 		return
 	}
 
 	// 检查连接状态
 	switch state {
 	case StateDisconnected:
-		c.logger.Info("连接已断开，跳过本次请求")
+		c.slogger.Info("连接已断开，跳过本次请求")
 		return
 	case StateConnecting:
-		c.logger.Info("正在连接中，跳过本次请求")
+		c.slogger.Info("正在连接中，跳过本次请求")
 		return
 	case StateDegraded:
-		c.logger.Info("连接降级，尝试恢复")
+		c.slogger.Info("连接降级，尝试恢复")
 		c.reconnect()
 		return
 	case StateConnected:
 		// 连接正常，执行请求
 		c.executeSayHello()
 	default:
-		c.logger.Warn("未知连接状态", map[string]interface{}{"state": state})
+		c.slogger.Warn("未知连接状态", map[string]interface{}{"state": state})
 	}
 }
 
-// executeSayHello 执行SayHello RPC调用
+// executeSayHello 执行 SayHello RPC 调用
 func (c *GRPCClient) executeSayHello() {
 	ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
 	defer cancel()
 
-	// 生成请求ID（如果启用）
+	// 生成请求 ID（如果启用）
 	var requestID string
 	if c.config.GenerateRequestID && c.idGenerator != nil {
 		requestID = c.idGenerator.Generate()
-		// 将请求ID添加到context metadata中，以便服务端追踪
+		// 将请求 ID 添加到 context metadata 中，以便服务端追踪
 		ctx = metadata.AppendToOutgoingContext(ctx, "x-request-id", requestID)
 	}
 
@@ -126,7 +126,7 @@ func (c *GRPCClient) executeSayHello() {
 
 		if err != nil {
 			logFields["error"] = err.Error()
-			c.logger.Error("SayHello请求失败", logFields)
+			c.slogger.Error("SayHello请求失败", logFields)
 			// 记录熔断器失败
 			c.circuitBreaker.RecordFailure()
 			// 记录指标
@@ -135,7 +135,7 @@ func (c *GRPCClient) executeSayHello() {
 		}
 
 		logFields["response"] = resp.GetMessage()
-		c.logger.Info("SayHello请求成功", logFields)
+		c.slogger.Info("SayHello请求成功", logFields)
 		// 记录熔断器成功
 		c.circuitBreaker.RecordSuccess()
 		// 记录指标

@@ -20,18 +20,18 @@ import (
 
 // Config 客户端配置
 type Config struct {
-	ServerAddr            string        // gRPC服务器地址
+	ServerAddr            string        // gRPC 服务器地址
 	KeepAliveInterval     time.Duration // 连接保活间隔
 	RequestInterval       time.Duration // 请求间隔时间
 	MaxRetries            int           // 最大重试次数
 	JitterPercent         int           // 随机抖动百分比（0-100）
 	MaxConcurrentRequests int           // 最大并发请求数
 	EnableCompression     bool          // 是否启用压缩
-	CompressionType       string        // 压缩类型：snappy（目前只支持snappy）
-	GenerateRequestID     bool          // 是否为每个请求生成唯一ID
+	CompressionType       string        // 压缩类型：snappy（目前只支持 snappy）
+	GenerateRequestID     bool          // 是否为每个请求生成唯一 ID
 }
 
-// GRPCClient gRPC客户端
+// GRPCClient gRPC 客户端
 type GRPCClient struct {
 	config          Config
 	conn            *grpc.ClientConn
@@ -46,13 +46,13 @@ type GRPCClient struct {
 	lastError       error             // 最后错误
 	reconnectCount  int               // 重连次数
 	circuitBreaker  *CircuitBreaker   // 熔断器
-	logger          *log.Logger       // 日志记录器
+	slogger         *log.Slogger      // 日志记录器
 	metrics         *Metrics          // 指标收集器
 	semaphore       *Semaphore        // 信号量，用于并发控制
-	idGenerator     tools.IDGenerator // ID生成器（如果启用）
+	idGenerator     tools.IDGenerator // ID 生成器（如果启用）
 }
 
-// NewGRPCClient 创建新的gRPC客户端
+// NewGRPCClient 创建新的 gRPC 客户端
 func NewGRPCClient(config Config) (*GRPCClient, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -65,10 +65,10 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 	// 设置压缩类型默认值
 	compressionType := config.CompressionType
 	if config.EnableCompression && compressionType == "" {
-		compressionType = "snappy" // 默认使用snappy压缩
+		compressionType = "snappy" // 默认使用 snappy 压缩
 	}
 
-	// 初始化ID生成器（如果启用）
+	// 初始化 ID 生成器（如果启用）
 	var idGenerator tools.IDGenerator
 	if config.GenerateRequestID {
 		idGenerator = tools.GetDefaultIDGenerator()
@@ -82,7 +82,7 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 		connectionState: StateDisconnected,
 		reconnectCount:  0,
 		circuitBreaker:  NewCircuitBreaker(5, 3, 30*time.Second), // 5次失败触发，3次成功恢复，开启30秒
-		logger:          log.NewLogger(),
+		slogger:         log.NewLogger(),
 		metrics:         NewMetrics(),
 		semaphore:       NewSemaphore(maxConcurrent),
 		idGenerator:     idGenerator,
@@ -93,8 +93,9 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 		client.config.CompressionType = "snappy"
 	}
 
-	// 建立gRPC连接
+	// 建立 gRPC 连接
 	if err := client.connect(); err != nil {
+		// 释放 context 持有的资源，避免资源泄露
 		cancel()
 		return nil, fmt.Errorf("连接gRPC服务器失败: %v", err)
 	}
@@ -107,18 +108,18 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 
 // Run 启动客户端主循环
 func (c *GRPCClient) Run() error {
-	c.logger.Info("启动gRPC客户端", map[string]interface{}{
+	c.slogger.Info("启动 gRPC 客户端", map[string]interface{}{
 		"server_addr": c.config.ServerAddr,
 	})
 
 	// 启动信号处理
 	c.setupSignalHandler()
 
-	// 启动主工作goroutine
+	// 启动主工作 goroutine
 	c.wg.Add(1)
 	go c.mainLoop()
 
-	// 等待优雅终止
+	// 等待终止
 	c.wg.Wait()
 
 	// 清理资源
@@ -132,12 +133,12 @@ func (c *GRPCClient) setupSignalHandler() {
 
 	go func() {
 		sig := <-signalChan
-		c.logger.Info("收到信号，开始关闭", map[string]interface{}{"signal": sig})
+		c.slogger.Info("收到信号，开始关闭", map[string]interface{}{"signal": sig})
 		c.Shutdown()
 	}()
 }
 
-// Shutdown 优雅关闭客户端
+// Shutdown 关闭客户端
 func (c *GRPCClient) Shutdown() {
 	c.mu.Lock()
 	if c.isShutting {
@@ -147,7 +148,7 @@ func (c *GRPCClient) Shutdown() {
 	c.isShutting = true
 	c.mu.Unlock()
 
-	c.logger.Info("开始关闭")
+	c.slogger.Info("开始关闭")
 
 	// 发送停止信号
 	c.cancel()
@@ -155,22 +156,22 @@ func (c *GRPCClient) Shutdown() {
 	// 等待主循环退出
 	close(c.stopChan)
 
-	// 等待所有goroutine完成
+	// 等待所有 goroutine 完成
 	c.wg.Wait()
 }
 
 // cleanup 清理资源
 func (c *GRPCClient) cleanup() error {
-	c.logger.Info("清理资源")
+	c.slogger.Info("清理资源")
 
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil {
 			return fmt.Errorf("关闭gRPC连接失败: %v", err)
 		}
-		c.logger.Info("gRPC连接已关闭")
+		c.slogger.Info("gRPC 连接已关闭")
 	}
 
-	c.logger.Info("客户端已完全关闭")
+	c.slogger.Info("客户端已完全关闭")
 	return nil
 }
 

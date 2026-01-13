@@ -11,7 +11,7 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
 		// 检查是否正在关闭
 		if c.IsShutting() {
-			c.logger.Info("客户端正在关闭，取消重试")
+			c.slogger.Info("客户端正在关闭，取消重试")
 			return
 		}
 
@@ -21,7 +21,7 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 			if backoff > 10*time.Second {
 				backoff = 10 * time.Second // 最大10秒
 			}
-			c.logger.Info("重试等待", map[string]interface{}{"attempt": attempt, "backoff": backoff})
+			c.slogger.Info("重试等待", map[string]interface{}{"attempt": attempt, "backoff": backoff})
 			time.Sleep(backoff)
 		}
 
@@ -35,21 +35,21 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 
 		// 检查是否是致命错误（无需重试）
 		if isFatalError(err) {
-			c.logger.Error("遇到致命错误，停止重试", map[string]interface{}{"error": err})
+			c.slogger.Error("遇到致命错误，停止重试", map[string]interface{}{"error": err})
 			break
 		}
 
 		// 如果是最后一次尝试，退出循环
 		if attempt == c.config.MaxRetries {
-			c.logger.Error("达到最大重试次数，最终失败", map[string]interface{}{"max_retries": c.config.MaxRetries, "error": err})
+			c.slogger.Error("达到最大重试次数，最终失败", map[string]interface{}{"max_retries": c.config.MaxRetries, "error": err})
 			break
 		}
 
-		c.logger.Warn("请求失败，准备重试", map[string]interface{}{"current_attempt": attempt+1, "total_attempts": c.config.MaxRetries+1, "error": err})
+		c.slogger.Warn("请求失败，准备重试", map[string]interface{}{"current_attempt": attempt + 1, "total_attempts": c.config.MaxRetries + 1, "error": err})
 	}
 
 	if lastErr != nil {
-		c.logger.Error("所有重试尝试均失败", map[string]interface{}{"error": lastErr})
+		c.slogger.Error("所有重试尝试均失败", map[string]interface{}{"error": lastErr})
 	}
 }
 

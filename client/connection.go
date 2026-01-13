@@ -21,7 +21,7 @@ const (
 	StateDegraded                            // 降级（部分功能不可用）
 )
 
-// connect 建立gRPC连接
+// connect 建立 gRPC 连接
 func (c *GRPCClient) connect() error {
 	c.mu.Lock()
 	c.connectionState = StateConnecting
@@ -37,7 +37,7 @@ func (c *GRPCClient) connect() error {
 		opts = append(opts, grpc.WithDefaultCallOptions(grpc.UseCompressor(c.config.CompressionType)))
 	}
 
-	c.logger.Info("正在连接到gRPC服务器", map[string]interface{}{
+	c.slogger.Info("正在连接到 gRPC 服务器", map[string]interface{}{
 		"server_addr":      c.config.ServerAddr,
 		"compression":      c.config.EnableCompression,
 		"compression_type": c.config.CompressionType,
@@ -60,7 +60,7 @@ func (c *GRPCClient) connect() error {
 	c.reconnectCount++
 	c.mu.Unlock()
 
-	c.logger.Info("成功连接到gRPC服务器", map[string]interface{}{
+	c.slogger.Info("成功连接到 gRPC 服务器", map[string]interface{}{
 		"server_addr":     c.config.ServerAddr,
 		"reconnect_count": c.reconnectCount,
 	})
@@ -83,7 +83,7 @@ func (c *GRPCClient) healthCheckLoop() {
 	for {
 		select {
 		case <-c.ctx.Done():
-			c.logger.Info("健康检查收到关闭信号，正在退出")
+			c.slogger.Info("健康检查收到关闭信号，正在退出")
 			return
 		case <-healthTicker.C:
 			c.checkConnectionHealth()
@@ -106,7 +106,7 @@ func (c *GRPCClient) checkConnectionHealth() {
 	// 检查连接状态
 	switch state {
 	case StateDisconnected:
-		c.logger.Info("连接已断开，尝试重新连接")
+		c.slogger.Info("连接已断开，尝试重新连接")
 		c.reconnect()
 	case StateConnected:
 		// 执行健康检查请求
@@ -114,26 +114,26 @@ func (c *GRPCClient) checkConnectionHealth() {
 			ctx, cancel := context.WithTimeout(c.ctx, 3*time.Second)
 			defer cancel()
 
-			// 发送简单的SayHello请求作为健康检查
+			// 发送简单的 SayHello 请求作为健康检查
 			req := &pb.HelloRequest{Name: "health-check"}
 			_, err := c.greeter.SayHello(ctx, req)
 			if err != nil {
-				c.logger.Error("健康检查失败，连接可能已断开", map[string]interface{}{"error": err})
+				c.slogger.Error("健康检查失败，连接可能已断开", map[string]interface{}{"error": err})
 				c.mu.Lock()
 				c.connectionState = StateDisconnected
 				c.lastError = err
 				c.mu.Unlock()
 				c.reconnect()
 			} else {
-				c.logger.Info("健康检查通过")
+				c.slogger.Info("健康检查通过")
 			}
 		}
 	case StateConnecting:
 		// 正在连接中，等待完成
-		c.logger.Info("连接中，跳过健康检查")
+		c.slogger.Info("连接中，跳过健康检查")
 	case StateDegraded:
 		// 降级状态，尝试恢复
-		c.logger.Info("连接降级，尝试恢复")
+		c.slogger.Info("连接降级，尝试恢复")
 		c.reconnect()
 	}
 }
@@ -164,16 +164,16 @@ func (c *GRPCClient) reconnect() {
 			return
 		}
 
-		c.logger.Info("重新连接尝试", map[string]interface{}{"current_attempt": retryCount+1, "max_attempts": maxReconnectRetries})
+		c.slogger.Info("重新连接尝试", map[string]interface{}{"current_attempt": retryCount + 1, "max_attempts": maxReconnectRetries})
 
 		err := c.connect()
 		if err == nil {
-			c.logger.Info("重新连接成功")
+			c.slogger.Info("重新连接成功")
 			c.metrics.RecordReconnect()
 			return
 		}
 
-		c.logger.Error("重新连接失败", map[string]interface{}{"error": err})
+		c.slogger.Error("重新连接失败", map[string]interface{}{"error": err})
 
 		// 指数退避等待
 		backoff := time.Duration(retryCount*retryCount+1) * time.Second
@@ -181,7 +181,7 @@ func (c *GRPCClient) reconnect() {
 			backoff = 30 * time.Second
 		}
 
-		c.logger.Info("等待后重试", map[string]interface{}{"backoff": backoff})
+		c.slogger.Info("等待后重试", map[string]interface{}{"backoff": backoff})
 		time.Sleep(backoff)
 		retryCount++
 	}
@@ -192,19 +192,12 @@ func (c *GRPCClient) reconnect() {
 	c.lastError = fmt.Errorf("重连失败，已尝试 %d 次", maxReconnectRetries)
 	c.mu.Unlock()
 
-	c.logger.Error("重连失败，已达到最大重试次数", map[string]interface{}{"max_retries": maxReconnectRetries})
+	c.slogger.Error("重连失败，已达到最大重试次数", map[string]interface{}{"max_retries": maxReconnectRetries})
 }
 
 // getConnectionState 获取连接状态
-func (c *GRPCClient) getConnectionState() ConnectionState {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.connectionState
-}
-
-// getLastError 获取最后错误
-func (c *GRPCClient) getLastError() error {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return c.lastError
-}
+// func (c *GRPCClient) getConnectionState() ConnectionState {
+// 	c.mu.RLock()
+// 	defer c.mu.RUnlock()
+// 	return c.connectionState
+// }
