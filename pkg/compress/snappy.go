@@ -32,4 +32,3 @@ func (s *snappyCompressor) Decompress(r io.Reader) (io.Reader, error) {
 func (s *snappyCompressor) Name() string {
 	return "snappy"
 }
-
