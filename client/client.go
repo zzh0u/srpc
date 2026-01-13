@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	_ "srpc/pkg/compress" // 确保压缩器被注册
 	"srpc/pkg/log"
 	"srpc/pkg/tools"
+	_ "srpc/pkg/tools"
+	pb "srpc/proto"
 	"sync"
 	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
-
-	_ "srpc/pkg/compress" // 确保压缩器被注册
-	_ "srpc/pkg/tools"
-	pb "srpc/proto"
 )
 
 // Config 客户端配置

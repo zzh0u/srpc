@@ -3,12 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
+	pb "srpc/proto"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	pb "srpc/proto"
 )
 
 // ConnectionState 连接状态
