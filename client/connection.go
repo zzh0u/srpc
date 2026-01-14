@@ -69,25 +69,22 @@ func (c *GRPCClient) connect() error {
 // startHealthChecker 启动健康检查
 func (c *GRPCClient) startHealthChecker() {
 	c.wg.Add(1)
-	go c.healthCheckLoop()
-}
+	go func() {
+		defer c.wg.Done()
 
-// healthCheckLoop 健康检查循环
-func (c *GRPCClient) healthCheckLoop() {
-	defer c.wg.Done()
+		healthTicker := time.NewTicker(c.config.KeepAliveInterval)
+		defer healthTicker.Stop()
 
-	healthTicker := time.NewTicker(c.config.KeepAliveInterval)
-	defer healthTicker.Stop()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			c.slogger.Info("健康检查收到关闭信号，正在退出")
-			return
-		case <-healthTicker.C:
-			c.checkConnectionHealth()
+		for {
+			select {
+			case <-c.ctx.Done():
+				c.slogger.Info("健康检查收到关闭信号，正在退出")
+				return
+			case <-healthTicker.C:
+				c.checkConnectionHealth()
+			}
 		}
-	}
+	}()
 }
 
 // checkConnectionHealth 检查连接健康状态
@@ -175,10 +172,7 @@ func (c *GRPCClient) reconnect() {
 		c.slogger.Error("重新连接失败", map[string]interface{}{"error": err})
 
 		// 指数退避等待
-		backoff := time.Duration(retryCount*retryCount+1) * time.Second
-		if backoff > 30*time.Second {
-			backoff = 30 * time.Second
-		}
+		backoff := min(time.Duration(retryCount*retryCount+1)*time.Second, 30*time.Second)
 
 		c.slogger.Info("等待后重试", map[string]interface{}{"backoff": backoff})
 		time.Sleep(backoff)

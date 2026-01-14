@@ -14,7 +14,7 @@ const (
 	CBStateHalfOpen                            // 半开：尝试部分请求
 )
 
-// String 方法用于CircuitBreakerState
+// String 方法用于 CircuitBreakerState
 func (s CircuitBreakerState) String() string {
 	switch s {
 	case CBStateClosed:

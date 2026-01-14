@@ -44,7 +44,6 @@ services:
       - MAX_RETRIES=3
       - KEEP_ALIVE_SEC=20
       - JITTER_PERCENT=10
-      - MAX_CONCURRENT_REQUESTS=5
       - ENABLE_COMPRESSION=true  # 启用压缩
       - COMPRESSION_TYPE=snappy  # 压缩类型
       - GENERATE_REQUEST_ID=true  # 生成请求ID

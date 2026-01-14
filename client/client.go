@@ -24,7 +24,6 @@ type Config struct {
 	RequestInterval       time.Duration // 请求间隔时间
 	MaxRetries            int           // 最大重试次数
 	JitterPercent         int           // 随机抖动百分比（0-100）
-	MaxConcurrentRequests int           // 最大并发请求数
 	EnableCompression     bool          // 是否启用压缩
 	CompressionType       string        // 压缩类型：snappy（目前只支持 snappy）
 	GenerateRequestID     bool          // 是否为每个请求生成唯一 ID
@@ -47,7 +46,6 @@ type GRPCClient struct {
 	circuitBreaker  *CircuitBreaker   // 熔断器
 	slogger         *log.Slogger      // 日志记录器
 	metrics         *Metrics          // 指标收集器
-	semaphore       *Semaphore        // 信号量，用于并发控制
 	idGenerator     tools.IDGenerator // ID 生成器（如果启用）
 }
 
@@ -55,11 +53,6 @@ type GRPCClient struct {
 func NewGRPCClient(config Config) (*GRPCClient, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 设置默认最大并发请求数
-	maxConcurrent := config.MaxConcurrentRequests
-	if maxConcurrent <= 0 {
-		maxConcurrent = 5 // 默认值
-	}
 
 	// 设置压缩类型默认值
 	compressionType := config.CompressionType
@@ -83,7 +76,6 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 		circuitBreaker:  NewCircuitBreaker(5, 3, 30*time.Second), // 5次失败触发，3次成功恢复，开启30秒
 		slogger:         log.NewLogger(),
 		metrics:         NewMetrics(),
-		semaphore:       NewSemaphore(maxConcurrent),
 		idGenerator:     idGenerator,
 	}
 
@@ -107,10 +99,6 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 
 // Run 启动客户端主循环
 func (c *GRPCClient) Run() error {
-	c.slogger.Info("启动 gRPC 客户端", map[string]interface{}{
-		"server_addr": c.config.ServerAddr,
-	})
-
 	// 启动信号处理
 	c.setupSignalHandler()
 

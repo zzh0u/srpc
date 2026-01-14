@@ -57,11 +57,6 @@ func loadConfig() client.Config {
 		jitterPercent = 100
 	}
 
-	// 获取最大并发请求数，默认为 5
-	maxConcurrentRequests := getEnvAsInt("MAX_CONCURRENT_REQUESTS", 5)
-	if maxConcurrentRequests < 1 {
-		maxConcurrentRequests = 1
-	}
 
 	// 获取是否启用压缩，默认为 false
 	enableCompression := getEnvAsBool("ENABLE_COMPRESSION", false)
@@ -78,7 +73,6 @@ func loadConfig() client.Config {
 		MaxRetries:            maxRetries,
 		KeepAliveInterval:     keepAliveInterval,
 		JitterPercent:         jitterPercent,
-		MaxConcurrentRequests: maxConcurrentRequests,
 		EnableCompression:     enableCompression,
 		CompressionType:       compressionType,
 		GenerateRequestID:     generateRequestID,

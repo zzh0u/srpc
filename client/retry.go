@@ -9,7 +9,6 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 	var lastErr error
 
 	for attempt := 0; attempt <= c.config.MaxRetries; attempt++ {
-		// 检查是否正在关闭
 		if c.IsShutting() {
 			c.slogger.Info("客户端正在关闭，取消重试")
 			return
@@ -17,18 +16,15 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 
 		// 如果不是第一次尝试，等待重试延迟
 		if attempt > 0 {
-			backoff := time.Duration(attempt*attempt) * time.Second // 指数退避: 1,4,9秒...
-			if backoff > 10*time.Second {
-				backoff = 10 * time.Second // 最大10秒
-			}
+			// 指数退避: 1,4,9 秒，最大 10 秒
+			backoff := min(time.Duration(attempt*attempt)*time.Second, 10*time.Second)
 			c.slogger.Info("重试等待", map[string]interface{}{"attempt": attempt, "backoff": backoff})
 			time.Sleep(backoff)
 		}
 
-		// 执行操作
 		err := operation()
 		if err == nil {
-			return // 成功
+			return
 		}
 
 		lastErr = err

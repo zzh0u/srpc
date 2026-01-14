@@ -10,6 +10,23 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// mainLoop 主循环
+func (c *GRPCClient) mainLoop() {
+	defer c.wg.Done()
+
+	for {
+		waitInterval := c.calculateJitteredInterval()
+
+		select {
+		case <-c.ctx.Done():
+			c.slogger.Info("主循环收到关闭信号，正在退出")
+			return
+		case <-time.After(waitInterval):
+			c.makeRequest()
+		}
+	}
+}
+
 // calculateJitteredInterval 计算带抖动的间隔时间
 func (c *GRPCClient) calculateJitteredInterval() time.Duration {
 	if c.config.JitterPercent <= 0 {
@@ -32,24 +49,6 @@ func (c *GRPCClient) calculateJitteredInterval() time.Duration {
 	}
 
 	return time.Duration(interval)
-}
-
-// mainLoop 主循环
-func (c *GRPCClient) mainLoop() {
-	defer c.wg.Done()
-
-	for {
-		// 计算带抖动的等待时间
-		waitInterval := c.calculateJitteredInterval()
-
-		select {
-		case <-c.ctx.Done():
-			c.slogger.Info("主循环收到关闭信号，正在退出")
-			return
-		case <-time.After(waitInterval):
-			c.makeRequest()
-		}
-	}
 }
 
 // makeRequest 发起 gRPC 请求
