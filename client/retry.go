@@ -50,7 +50,7 @@ func (c *GRPCClient) executeWithRetry(operation func() error) {
 }
 
 // isFatalError 检查是否为致命错误（无需重试）
-func isFatalError(err error) bool {
+func isFatalError(_ error) bool {
 	// TODO: 可以根据具体的gRPC错误码来判断
 	// 例如：无效参数、权限拒绝等错误无需重试
 	return false
