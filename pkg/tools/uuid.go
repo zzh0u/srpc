@@ -2,7 +2,6 @@ package tools
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"sync"
 	"time"
@@ -43,7 +42,7 @@ func (g *SimpleIDGenerator) Generate() string {
 
 	if now == g.lastTime {
 		g.sequence++
-		if g.sequence >= 8192 { // 13位序列号最大8191
+		if g.sequence >= 8192 { // 13 位序列号最大 8191
 			// 等待下一毫秒
 			for now <= g.lastTime {
 				time.Sleep(time.Microsecond)
@@ -92,16 +91,6 @@ func MustGenerateUUID() string {
 	return uuid
 }
 
-// ShortID 生成一个简短的随机ID（16字符）
-func ShortID() (string, error) {
-	var bytes [8]byte
-	_, err := rand.Read(bytes[:])
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes[:]), nil
-}
-
 // DefaultIDGenerator 默认的ID生成器实例
 var (
 	defaultGenerator *SimpleIDGenerator
@@ -111,19 +100,16 @@ var (
 // GetDefaultIDGenerator 获取默认的ID生成器（单例）
 func GetDefaultIDGenerator() *SimpleIDGenerator {
 	once.Do(func() {
-		// 使用一个随机的节点ID
+		// 使用一个随机的节点 ID
 		var nodeID uint16
-		// 读取2个随机字节并转换为uint16
+
+		// 读取 2 个随机字节并转换为 uint16
 		var b [2]byte
 		rand.Read(b[:])
+
 		// 使用小端字节序转换
 		nodeID = uint16(b[0]) | uint16(b[1])<<8
 		defaultGenerator = NewSimpleIDGenerator(nodeID % 1024)
 	})
 	return defaultGenerator
-}
-
-// GenerateID 使用默认生成器生成ID
-func GenerateID() string {
-	return GetDefaultIDGenerator().Generate()
 }

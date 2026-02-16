@@ -17,7 +17,7 @@ const (
 	StateDisconnected ConnectionState = iota // 断开连接
 	StateConnecting                          // 连接中
 	StateConnected                           // 已连接
-	StateDegraded                            // 降级（部分功能不可用）
+	StateDegraded                            // 降级（部分功能不可用），预留设计
 )
 
 // connect 建立 gRPC 连接

@@ -36,7 +36,7 @@ type CircuitBreaker struct {
 	lastStateChange   time.Time
 	openDuration      time.Duration
 	failureThreshold  int
-	successThreshold  int
+	successThreshold  int // 成功请求的阈值
 	halfOpenMaxCalls  int
 	halfOpenCallCount int
 	mu                sync.RWMutex

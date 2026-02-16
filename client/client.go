@@ -19,14 +19,14 @@ import (
 
 // Config 客户端配置
 type Config struct {
-	ServerAddr            string        // gRPC 服务器地址
-	KeepAliveInterval     time.Duration // 连接保活间隔
-	RequestInterval       time.Duration // 请求间隔时间
-	MaxRetries            int           // 最大重试次数
-	JitterPercent         int           // 随机抖动百分比（0-100）
-	EnableCompression     bool          // 是否启用压缩
-	CompressionType       string        // 压缩类型：snappy（目前只支持 snappy）
-	GenerateRequestID     bool          // 是否为每个请求生成唯一 ID
+	ServerAddr        string        // gRPC 服务器地址
+	KeepAliveInterval time.Duration // 连接保活间隔
+	RequestInterval   time.Duration // 请求间隔时间
+	MaxRetries        int           // 最大重试次数
+	JitterPercent     int           // 随机抖动百分比（0-100）
+	EnableCompression bool          // 是否启用压缩
+	CompressionType   string        // 压缩类型：snappy（目前只支持 snappy）
+	GenerateRequestID bool          // 是否为每个请求生成唯一 ID
 }
 
 // GRPCClient gRPC 客户端
@@ -46,13 +46,12 @@ type GRPCClient struct {
 	circuitBreaker  *CircuitBreaker   // 熔断器
 	slogger         *log.Slogger      // 日志记录器
 	metrics         *Metrics          // 指标收集器
-	idGenerator     tools.IDGenerator // ID 生成器（如果启用）
+	idGenerator     tools.IDGenerator // ID 生成器
 }
 
 // NewGRPCClient 创建新的 gRPC 客户端
 func NewGRPCClient(config Config) (*GRPCClient, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-
 
 	// 设置压缩类型默认值
 	compressionType := config.CompressionType
@@ -60,7 +59,7 @@ func NewGRPCClient(config Config) (*GRPCClient, error) {
 		compressionType = "snappy" // 默认使用 snappy 压缩
 	}
 
-	// 初始化 ID 生成器（如果启用）
+	// 初始化 ID 生成器
 	var idGenerator tools.IDGenerator
 	if config.GenerateRequestID {
 		idGenerator = tools.GetDefaultIDGenerator()

@@ -94,7 +94,7 @@ func (c *GRPCClient) executeSayHello() {
 	ctx, cancel := context.WithTimeout(c.ctx, 5*time.Second)
 	defer cancel()
 
-	// 生成请求 ID（如果启用）
+	// 生成请求 ID
 	var requestID string
 	if c.config.GenerateRequestID && c.idGenerator != nil {
 		requestID = c.idGenerator.Generate()
@@ -124,7 +124,7 @@ func (c *GRPCClient) executeSayHello() {
 
 		if err != nil {
 			logFields["error"] = err.Error()
-			c.slogger.Error("SayHello请求失败", logFields)
+			c.slogger.Error("SayHello 请求失败", logFields)
 			// 记录熔断器失败
 			c.circuitBreaker.RecordFailure()
 			// 记录指标
@@ -133,7 +133,7 @@ func (c *GRPCClient) executeSayHello() {
 		}
 
 		logFields["response"] = resp.GetMessage()
-		c.slogger.Info("SayHello请求成功", logFields)
+		c.slogger.Info("SayHello 请求成功", logFields)
 		// 记录熔断器成功
 		c.circuitBreaker.RecordSuccess()
 		// 记录指标
